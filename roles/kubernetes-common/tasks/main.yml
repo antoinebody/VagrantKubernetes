@@ -1,0 +1,116 @@
+---
+- name: Turn off swap
+  become: true
+  shell: swapoff -a
+
+- name: Remove current swaps from fstab
+  become: true
+  lineinfile:
+    dest: /etc/fstab
+    regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+    line: '# \1'
+    backrefs: yes
+    state: present
+
+- name: Disable swappiness and pass bridged IPv4 traffic to iptable's chains
+  become: true
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  with_items:
+    - { name: 'vm.swappiness', value: '0' }
+    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+
+- name: Install Commons packages
+  become:         true
+  apt:
+    name:         "{{ item }}"
+    state:        "present"
+    update_cache: yes
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+
+- name: Add Docker Apt key
+  become: true
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Get OS Version
+  shell: echo $(lsb_release -cs)
+  register: os_version
+
+
+- name: Add Docker Apt repository
+  become: true
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{os_version.stdout}} stable
+    filename: docker
+    state: present
+
+- name: Install docker-ce
+  become: true
+  apt:
+    name: docker-ce
+    state: latest
+    update_cache: yes
+  
+- name: Adding user {{ ansible_user }} to Docker group
+  become: true
+  user: 
+      name: "{{ansible_user}}"
+      groups: docker
+      append: yes
+
+
+- name: Enable Docker for systemctl
+  become: true
+  systemd:
+    name: docker
+    state: started
+    masked: no
+
+- name: Add Google Apt key
+  become: true
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+
+- name: Add Kubernetes Apt repository
+  become: true
+  apt_repository:
+    repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+    filename: kubernetes
+    state: present
+
+
+- name: Install Kubernetes
+  become:         true
+  apt:
+    name:         "{{ item }}"
+    state:        "present"
+    update_cache: yes
+  with_items:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+
+# user normal
+# sudo apt-get update
+# sudo apt-get install -y kubelet kubeadm kubectl
+# export KUBERNETES_SERVICE_HOST=192.168.8.10
+# export KUBERNETES_SERVICE_PORT=6443
+# sudo kubeadm init --apiserver-advertise-address 192.168.8.10 --token 54c315.78a320e33baaf27d
+# mkdir -p $HOME/.kube
+# sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+# sudo chown $(id -u):$(id -g) $HOME/.kube/config
+# sudo  sysctl net.bridge.bridge-nf-call-iptables=1
+# export kubever=$(kubectl version | base64 | tr -d '\n')
+# kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+   

@@ -1,0 +1,25 @@
+---
+
+- name: Init Kubernetes cluster
+  become: true
+  shell: |
+    kubeadm init --pod-network-cidr=192.168.0.0/16 \
+                 --apiserver-advertise-address {{ groups['kube-master'][0] }} \
+                 --token b0f7b8.8d1767876297d85c 
+
+# sudo cp /etc/kubernetes/admin.conf $HOME/
+# sudo chown $(id -u):$(id -g) $HOME/admin.conf
+# export KUBECONFIG=$HOME/admin.conf
+#kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+
+- name: Enable and restart kubelet engine
+  become: true
+  systemd:
+    name: kubelet
+    daemon_reload: yes
+    state: restarted
+    enabled: yes
+
+
+# journalctl -xe | grep cni
+# Feb 04 16:30:24 k8smode kubelet[17169]: E0204 16:30:24.747253   17169 pod_workers.go:186] Error syncing pod ddeccb92-09c7-11e8-8f34-0800271047e3 ("nginx-app-6cc6d7964d-n6g9j_default(ddeccb92-09c7-11e8-8f34-0800271047e3)"), skipping: failed to "CreatePodSandbox" for "nginx-app-6cc6d7964d-n6g9j_default(ddeccb92-09c7-11e8-8f34-0800271047e3)" with CreatePodSandboxError: "CreatePodSandbox for pod \"nginx-app-6cc6d7964d-n6g9j_default(ddeccb92-09c7-11e8-8f34-0800271047e3)\" failed: rpc error: code = Unknown desc = NetworkPlugin cni failed to set up pod \"nginx-app-6cc6d7964d-n6g9j_default\" network: Unable to retreive ReadyFlag from Backend: client: etcd cluster is unavailable or misconfigured; error #0: dial tcp 10.96.232.136:6666: getsockopt: connection refused\n"
