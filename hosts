@@ -1,0 +1,14 @@
+[all-nodes]
+192.168.8.10
+192.168.8.11
+
+[kube-master]
+192.168.8.10
+
+[kube-nodes]
+192.168.8.11
+
+[all:vars]
+ansible_connection=ssh 
+ansible_ssh_user=vagrant
+ansible_python_interpreter=/usr/bin/python3

@@ -1,11 +1,20 @@
 ---
 
+#/etc/kubernetes/manifests/kube-apiserver.yaml
+
+- name: Check if Kebernetes have been already initialized
+  stat: 
+    path: /etc/kubernetes/manifests/kube-apiserver.yaml
+  register: kube_api_server_file
+
 - name: Init Kubernetes cluster
   become: true
   shell: |
     kubeadm init --pod-network-cidr=192.168.0.0/16 \
                  --apiserver-advertise-address {{ groups['kube-master'][0] }} \
                  --token b0f7b8.8d1767876297d85c 
+  when: kube_api_server_file.stat.exists == False
+
 
 # sudo cp /etc/kubernetes/admin.conf $HOME/
 # sudo chown $(id -u):$(id -g) $HOME/admin.conf
@@ -20,6 +29,31 @@
     state: restarted
     enabled: yes
 
+- name: Copy admin conf to home user
+  become: true
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ ansible_env.HOME }}"
+    remote_src: yes
+
+- name: Change owner of admin.conf
+  become: true
+  file:
+    path: "{{ ansible_env.HOME }}/admin.conf"
+    owner: "{{ ansible_user_id }}"
+
+- name: Apply calico network layer
+  shell: kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+  environment:
+    KUBECONFIG: "{{ ansible_env.HOME }}/admin.conf"
+
+
+
+
+  
+
+
+
 
 # journalctl -xe | grep cni
-# Feb 04 16:30:24 k8smode kubelet[17169]: E0204 16:30:24.747253   17169 pod_workers.go:186] Error syncing pod ddeccb92-09c7-11e8-8f34-0800271047e3 ("nginx-app-6cc6d7964d-n6g9j_default(ddeccb92-09c7-11e8-8f34-0800271047e3)"), skipping: failed to "CreatePodSandbox" for "nginx-app-6cc6d7964d-n6g9j_default(ddeccb92-09c7-11e8-8f34-0800271047e3)" with CreatePodSandboxError: "CreatePodSandbox for pod \"nginx-app-6cc6d7964d-n6g9j_default(ddeccb92-09c7-11e8-8f34-0800271047e3)\" failed: rpc error: code = Unknown desc = NetworkPlugin cni failed to set up pod \"nginx-app-6cc6d7964d-n6g9j_default\" network: Unable to retreive ReadyFlag from Backend: client: etcd cluster is unavailable or misconfigured; error #0: dial tcp 10.96.232.136:6666: getsockopt: connection refused\n"
+

@@ -1,4 +1,83 @@
 ---
+
+- name: Install golang
+  become: true
+  unarchive:
+    #src: https://storage.googleapis.com/golang/go1.10.linux-amd64.tar.gz
+    src: "{{go_url}}"
+    dest: /usr/local
+    remote_src: yes
+    creates: /usr/local/go/bin/go
+
+- name: Debug test
+  debug:
+    msg: "Avant notify !! !!!"
+
+- name: Add golang to path
+  become: true
+  copy:
+    src: "golang.sh"
+    dest: /etc/profile.d
+  tags:
+    - test
+
+- name: Check if crictl exists
+  stat: 
+    path: /usr/local/crictl
+  register: crictl_bin_folder
+  tags:
+    - test
+    - crictl
+
+- name: Compile crictl with go
+  shell: go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
+  tags:
+    - test
+    - crictl
+
+- name: Create target crictl folder in /usr/local
+  become: true
+  file:
+    path: /usr/local/crictl
+    state: directory
+    mode: "u=rw,g=rx,o=rx"
+  tags:
+    - test
+    - crictllocal
+
+
+- name: Move crictl on /usr/local
+  become: true
+  copy:
+    remote_src: yes
+    src: "{{ ansible_env.HOME }}/go/bin/crictl"
+    dest: /usr/local/crictl
+    mode: "u=rw,g=rx,o=rx"
+  #when: crictl_bin_folder.stat.exists == False
+  tags:
+    - test
+    - crictllocal
+
+- name: Add crictl to path
+  become: true
+  copy:
+    src: "crictl.sh"
+    dest: /etc/profile.d
+  notify:
+    - reload /etc/profile
+  tags:
+    - test
+    - crictllocal
+
+- name: Remove old files foo
+  file: 
+    path: "{{ ansible_env.HOME }}/go" 
+    state: absent
+  when: crictl_bin_folder.stat.exists == False
+  tags:
+    - test
+
+
 - name: Turn off swap
   become: true
   shell: swapoff -a
@@ -18,9 +97,10 @@
     name: "{{ item.name }}"
     value: "{{ item.value }}"
     state: present
+    reload: yes
   with_items:
     - { name: 'vm.swappiness', value: '0' }
-    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
+  #  - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
 
 - name: Install Commons packages
   become:         true
@@ -99,6 +179,10 @@
     - kubelet
     - kubeadm
     - kubectl
+
+
+
+
 
 
 # user normal

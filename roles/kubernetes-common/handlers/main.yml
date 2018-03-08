@@ -1,0 +1,11 @@
+
+---
+
+- name: reload /etc/profile
+  shell: ". /etscsc/profile"
+
+- name: Debug test
+  file:
+    path: /home/vagrant/test.txt
+    state: exists
+  listen: "debug_test"

@@ -16,7 +16,8 @@ boxes = [
 
 Vagrant.configure("2") do |config|
 
-    config.vm.box = "bento/ubuntu-16.04"
+    #config.vm.box = "bento/ubuntu-16.04"
+    config.vm.box = "ubuntu/xenial64"
      boxes.each do |opts|
       config.vm.define opts[:name] do |config|
         config.vm.hostname = opts[:name]
@@ -24,12 +25,15 @@ Vagrant.configure("2") do |config|
           v.customize ["modifyvm", :id, "--memory", opts[:mem]]
           v.customize ["modifyvm", :id, "--cpus", opts[:cpu]]
         end
-        config.vm.network :private_network, ip: opts[:eth1],  auto_config: true
+        config.vm.network :private_network, ip: opts[:eth1]
+        config.ssh.private_key_path = ["/Users/toinou/.ssh/id_rsa", "~/.vagrant.d/insecure_private_key"]
+        config.ssh.insert_key = false
+        config.vm.provision "file", source: "/Users/toinou/.ssh/id_rsa.pub", destination: "~/.ssh/authorized_keys"
       end
   end
 end
 
- 
+  
 
 #  MASTER
 # -----
