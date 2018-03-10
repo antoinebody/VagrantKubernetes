@@ -2,7 +2,7 @@
 ---
 
 - name: reload /etc/profile
-  shell: ". /etscsc/profile"
+  shell: ". /etc/profile"
 
 - name: Debug test
   file:

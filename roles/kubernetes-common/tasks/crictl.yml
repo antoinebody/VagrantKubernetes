@@ -1,0 +1,74 @@
+---
+
+- name: Install golang
+  become: true
+  unarchive:
+    src: "{{go_url}}"
+    dest: "{{binary_install_folder}}"
+    remote_src: yes
+    # TODO : maybe check if gfo version is the same as defined in group_vars/all
+    # skip if go executable already exists
+    creates: "{{go_executable}}"
+  tags:
+    - go
+
+- name: Add golang to path
+  become: true
+  copy:
+    src: "golang.sh"
+    dest: /etc/profile.d
+  tags:
+    - interactive
+
+- name: Register if crictl exists
+  stat: 
+    path: "{{crictl_executable}}"
+  register: crictl_executable_exists
+  tags:
+    - crictl
+
+- name: Compile crictl with go
+  shell: "go get {{crictl_git_url}}"
+  when: not crictl_executable_exists.stat.exists
+  tags:
+    - crictl
+
+- name: Create target crictl folder in /usr/local
+  become: true
+  file:
+    path: "{{crictl_install_folder}}"
+    state: directory
+    mode: "u=rw,g=rx,o=rx"
+  when: not crictl_executable_exists.stat.exists
+  tags:
+    - crictl
+
+- name: Move crictl on /usr/local
+  become: true
+  copy:
+    remote_src: yes
+    src: "{{ ansible_env.HOME }}/go/bin/crictl"
+    dest: "{{crictl_install_folder}}"
+    mode: "u=rw,g=rx,o=rx"
+  when: not crictl_executable_exists.stat.exists
+  tags:
+    - crictl
+
+- name: Add crictl to path
+  become: true
+  copy:
+    src: "crictl.sh"
+    dest: /etc/profile.d
+  notify:
+    - reload /etc/profile
+  tags:
+    - interactive
+
+
+# - name: Remove old files foo
+#   file: 
+#     path: "{{ ansible_env.HOME }}/go" 
+#     state: absent
+#   when: crictl_bin_folder.stat.exists == False
+#   tags:
+#     - test

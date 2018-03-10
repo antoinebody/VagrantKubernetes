@@ -1,2 +1,15 @@
 ---
-go_url: https://storage.googleapis.com/golang/go1.10.linux-amd64.tar.gz
+binary_install_folder: /usr/local
+
+go_version: "1.10"
+go_url: "https://storage.googleapis.com/golang/go{{go_version}}.linux-amd64.tar.gz"
+go_install_folder: "{{binary_install_folder}}/go"
+go_binary_folder: "{{go_install_folder}}/bin"
+go_executable: "{{go_binary_folder}}/go"
+
+crictl_install_folder: "{{binary_install_folder}}/crictl"
+crictl_executable: "{{crictl_install_folder}}/crictl"
+crictl_git_url: github.com/kubernetes-incubator/cri-tools/cmd/crictl
+
+extra_path: "{{go_binary_folder}}:{{crictl_install_folder}}:/usr/bin/git"
+

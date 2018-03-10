@@ -14,6 +14,8 @@
                  --apiserver-advertise-address {{ groups['kube-master'][0] }} \
                  --token b0f7b8.8d1767876297d85c 
   when: kube_api_server_file.stat.exists == False
+  environment:
+    PATH: "$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:{{extra_path}}"
 
 
 # sudo cp /etc/kubernetes/admin.conf $HOME/
@@ -46,6 +48,7 @@
   shell: kubectl apply -f https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
   environment:
     KUBECONFIG: "{{ ansible_env.HOME }}/admin.conf"
+    PATH: "$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:{{extra_path}}"
 
 
 
